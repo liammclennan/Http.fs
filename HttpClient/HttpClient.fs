@@ -255,6 +255,7 @@ let private toHttpWebRequest request =
 
     let url = request.Url + (request |> getQueryString)
     let webRequest = HttpWebRequest.Create(url) :?> HttpWebRequest
+                      |> request.SetupFunction
 
     webRequest.Method <- request |> getMethodAsString
     webRequest.ProtocolVersion <- HttpVersion.Version11
@@ -280,7 +281,7 @@ let private toHttpWebRequest request =
         use requestStream = webRequest.GetRequestStream() 
         requestStream.AsyncWrite(bodyBytes, 0, bodyBytes.Length) |> Async.RunSynchronously
 
-    request.SetupFunction webRequest
+    webRequest
 
 // Uses the HttpWebRequest to get the response.
 // HttpWebRequest throws an exception on anything but a 200-level response,
