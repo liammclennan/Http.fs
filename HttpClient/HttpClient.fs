@@ -102,6 +102,7 @@ type Request = {
     QueryStringItems: NameValue list option
     Cookies: NameValue list option
     ResponseCharacterEncoding: string option
+    SetupFunction: HttpWebRequest -> HttpWebRequest
 }
 
 type Response = {
@@ -211,6 +212,7 @@ let createRequest httpMethod url = {
     QueryStringItems = None;
     Cookies = None;
     ResponseCharacterEncoding = None;
+    SetupFunction = (fun hwr -> hwr);
     }
 
 let withCookiesDisabled request = 
@@ -242,6 +244,13 @@ let withCookie cookie request =
 let withResponseCharacterEncoding encoding request:Request = 
     {request with ResponseCharacterEncoding = Some(encoding)}
 
+let withSetup f request = 
+    {request with SetupFunction = f}
+
+let withDefaultCredentials request =
+    let oldSetup = request.SetupFunction
+    {request with SetupFunction = (fun hwr -> hwr.UseDefaultCredentials <- true; oldSetup hwr)}
+
 let private toHttpWebRequest request =
 
     let url = request.Url + (request |> getQueryString)
@@ -270,8 +279,8 @@ let private toHttpWebRequest request =
         // Getting the request stream seems to be actually connecting to the internet in some way
         use requestStream = webRequest.GetRequestStream() 
         requestStream.AsyncWrite(bodyBytes, 0, bodyBytes.Length) |> Async.RunSynchronously
-        
-    webRequest
+
+    request.SetupFunction webRequest
 
 // Uses the HttpWebRequest to get the response.
 // HttpWebRequest throws an exception on anything but a 200-level response,
